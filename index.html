@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GROKNinja</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas"></canvas>
+
+      <div id="hud" aria-hidden="true">
+        <div id="crosshair"></div>
+        <div id="hurt-flash"></div>
+        <div id="status">
+          <div id="health"><div id="health-fill"></div></div>
+          <div id="kills">Red Clan defeated: 0</div>
+        </div>
+        <div id="banner"></div>
+        <div id="pause-overlay">
+          <h2>Paused</h2>
+          <p>Press P or click to resume</p>
+        </div>
+        <p id="hint">
+          Click to play · WASD move · Space sprint · LShift jump · Ctrl roll ·
+          Click kick · RMB jump attack · Mouse look · Scroll zoom · P pause · M mute · H helpers
+        </p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

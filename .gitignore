@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+
+# Build
+dist
+dist-ssr
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Editor
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.*
+
+# Local asset library (duplicates / sources the game doesn't load)
+/models/
+/characters/
+/tools/blender/
+/public/models/
+/public/characters/NINJAmix.fbx
+*.blend
+*.blend1
+
+# Village pack: the game only loads diffuse / roughness / alpha maps
+/ancientvillage/**/*_normal.png
+
+# Environment GLBs: keep only the ones imported by the game
+/assets/environment/*
+!/assets/environment/japanese_shrine.glb
+!/assets/environment/japanese_maple_tree.glb
