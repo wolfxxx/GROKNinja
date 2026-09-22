@@ -29,6 +29,8 @@ Thumbs.db
 /characters/
 /tools/blender/
 /public/models/
+# Linked at build/dev time to ../ancientvillage (see deploy workflow)
+/public/ancientvillage
 /public/characters/NINJAmix.fbx
 *.blend
 *.blend1

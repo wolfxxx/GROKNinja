@@ -3,6 +3,7 @@ import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import shrineUrl from "../../assets/environment/japanese_shrine.glb?url";
+import { assetUrl } from "./assetUrl";
 
 const PIXEL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
@@ -33,7 +34,7 @@ type Pack = {
   alphaTest?: number;
 };
 
-const BASE = "/ancientvillage";
+const BASE = assetUrl("ancientvillage").replace(/\/$/, "");
 
 const PACKS = {
   hut: {
@@ -177,7 +178,7 @@ export class Village {
   private async loadAssembledGlb(url: string): Promise<void> {
     const loader = new GLTFLoader();
     const draco = new DRACOLoader();
-    draco.setDecoderPath("/draco/");
+    draco.setDecoderPath(assetUrl("draco/"));
     loader.setDRACOLoader(draco);
     const gltf = await loader.loadAsync(url);
     this.placed.clear();

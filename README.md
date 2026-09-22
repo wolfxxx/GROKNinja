@@ -21,6 +21,13 @@ npm run dev
 
 Open `http://localhost:5173` and click the canvas to start.
 
+## Play online
+
+Live site (GitHub Pages): **https://wolfxxx.github.io/GROKNinja/**
+
+First load can take a while — the Mixamo takes and village assets are large.
+The site is rebuilt and published automatically on every push to `main`.
+
 ## Controls
 
 | Input | Action |

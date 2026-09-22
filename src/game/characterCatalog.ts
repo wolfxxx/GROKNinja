@@ -1,19 +1,21 @@
+import { assetUrl } from "./assetUrl";
+
 /**
  * Player hero — Mixamo ninja. Mesh comes from NINJArun.fbx; extra takes on
  * the same skeleton are loaded from idle / running-jump / roll / kick / jumphit FBXs.
  */
 export const HERO_NINJA = {
-  url: "/characters/NINJArun.fbx",
-  idleUrl: "/characters/NINJAidle.fbx",
-  jumpUrl: "/characters/NINJArunjump.fbx",
-  rollUrl: "/characters/NINJAroll.fbx",
-  kickUrl: "/characters/NINJAkick.fbx",
-  jumpHitUrl: "/characters/NINJAjumphit.fbx",
+  url: assetUrl("characters/NINJArun.fbx"),
+  idleUrl: assetUrl("characters/NINJAidle.fbx"),
+  jumpUrl: assetUrl("characters/NINJArunjump.fbx"),
+  rollUrl: assetUrl("characters/NINJAroll.fbx"),
+  kickUrl: assetUrl("characters/NINJAkick.fbx"),
+  jumpHitUrl: assetUrl("characters/NINJAjumphit.fbx"),
   height: 1.7,
 } as const;
 
 /** Red Clan enemies reuse the hero rig; this take is only used by them. */
-export const ENEMY_PUNCH_URL = "/characters/NINJApunch.fbx";
+export const ENEMY_PUNCH_URL = assetUrl("characters/NINJApunch.fbx");
 
 export type NpcSpawn = {
   name: string;
@@ -33,7 +35,7 @@ export type NpcSpawn = {
 export const NPC_SPAWNS: readonly NpcSpawn[] = [
   {
     name: "Kunoichi",
-    url: "/characters/ninjagirl.glb",
+    url: assetUrl("characters/ninjagirl.glb"),
     height: 1.55,
     x: 2.05,
     y: 0,
@@ -42,7 +44,7 @@ export const NPC_SPAWNS: readonly NpcSpawn[] = [
   },
   {
     name: "Shopkeeper",
-    url: "/characters/shopkeeper.glb",
+    url: assetUrl("characters/shopkeeper.glb"),
     height: 1.48,
     x: -2.05,
     y: 0,
@@ -51,7 +53,7 @@ export const NPC_SPAWNS: readonly NpcSpawn[] = [
   },
   {
     name: "RivalNinja",
-    url: "/characters/rivalninja.glb",
+    url: assetUrl("characters/rivalninja.glb"),
     height: 1.6,
     x: 2.08,
     y: 0,
@@ -60,7 +62,7 @@ export const NPC_SPAWNS: readonly NpcSpawn[] = [
   },
   {
     name: "SpiritFox",
-    url: "/characters/spiritfox.glb",
+    url: assetUrl("characters/spiritfox.glb"),
     height: 0.68,
     x: -1.85,
     y: 0.12,
@@ -69,7 +71,7 @@ export const NPC_SPAWNS: readonly NpcSpawn[] = [
   },
   {
     name: "OldMaster",
-    url: "/characters/oldmaster.glb",
+    url: assetUrl("characters/oldmaster.glb"),
     height: 1.36,
     x: 0,
     y: 0,
@@ -78,7 +80,7 @@ export const NPC_SPAWNS: readonly NpcSpawn[] = [
   },
   {
     name: "ShadowDemon",
-    url: "/characters/demonboss3.glb",
+    url: assetUrl("characters/demonboss3.glb"),
     height: 1.9,
     x: 2.15,
     y: 0,

@@ -12,6 +12,7 @@ import { Nature } from "./Nature";
 import { Player } from "./Player";
 import { ThirdPersonCamera } from "./ThirdPersonCamera";
 import { Village } from "./Village";
+import { assetUrl } from "./assetUrl";
 
 const MAX_DELTA = 0.05;
 
@@ -375,7 +376,7 @@ export class Game {
   private loadHeroGltf(url: string): void {
     const loader = new GLTFLoader();
     const draco = new DRACOLoader();
-    draco.setDecoderPath("/draco/");
+    draco.setDecoderPath(assetUrl("draco/"));
     loader.setDRACOLoader(draco);
 
     loader.load(

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { assetUrl } from "./assetUrl";
 
 export const SOUND_NAMES = [
   "kick_whoosh",
@@ -246,7 +247,7 @@ export class GameAudio {
     await Promise.all(
       SOUND_NAMES.map(async (name) => {
         try {
-          const res = await fetch(`/audio/${name}.mp3`);
+          const res = await fetch(assetUrl(`audio/${name}.mp3`));
           if (!res.ok) return;
           const buffer = await this.ctx.decodeAudioData(await res.arrayBuffer());
           const offset =
