@@ -38,6 +38,7 @@ export class Game {
     kills: document.getElementById("kills"),
     hurt: document.getElementById("hurt-flash"),
     banner: document.getElementById("banner"),
+    load: document.getElementById("load-status"),
     pause: document.getElementById("pause-overlay"),
   };
   private paused = false;
@@ -318,19 +319,41 @@ export class Game {
   }
 
   private loadHeroFbx(url: string): void {
+    // Combat clips first so kick / roll / jump unlock as soon as possible on slow links.
     const extraClipUrls = [
-      HERO_NINJA.idleUrl,
-      HERO_NINJA.jumpUrl,
-      HERO_NINJA.rollUrl,
       HERO_NINJA.kickUrl,
+      HERO_NINJA.rollUrl,
+      HERO_NINJA.jumpUrl,
       HERO_NINJA.jumpHitUrl,
+      HERO_NINJA.idleUrl,
     ].filter((extra) => extra && extra !== url);
     void this.assembleHeroFbx(url, extraClipUrls);
   }
 
+  private setLoadStatus(text: string | null): void {
+    const el = this.hud.load;
+    if (!el) return;
+    if (!text) {
+      el.classList.add("is-hidden");
+      return;
+    }
+    el.textContent = text;
+    el.classList.remove("is-hidden");
+  }
+
   private async assembleHeroFbx(meshUrl: string, extraClipUrls: string[]): Promise<void> {
+    this.setLoadStatus("Downloading character…");
+
+    // Kick off every FBX at once — sequential waits were ~1 min on Pages.
+    const meshPromise = loadFbx(meshUrl);
+    const extraJobs = extraClipUrls.map((extraUrl) => ({
+      url: extraUrl,
+      promise: loadFbx(extraUrl),
+    }));
+    const punchPromise = loadFbx(ENEMY_PUNCH_URL);
+
     try {
-      const meshGroup = await loadFbx(meshUrl);
+      const meshGroup = await meshPromise;
       const clips = takeLabeledClips(meshGroup, clipLabelFromUrl(meshUrl));
       const fitted = fitCharacter(meshGroup, HERO_NINJA.height);
       fitted.name = "HeroNinja";
@@ -347,30 +370,44 @@ export class Game {
     } catch (err) {
       console.error("Failed to load hero FBX", err);
       this.player.showPlaceholder();
+      this.setLoadStatus("Character failed to load");
       return;
     }
 
-    for (const extraUrl of extraClipUrls) {
-      try {
-        const extraGroup = await loadFbx(extraUrl);
-        const extraClips = takeLabeledClips(extraGroup, clipLabelFromUrl(extraUrl));
-        this.player.addClips(extraClips);
-        this.enemies.addClips(extraClips);
-        console.info(
-          "[hero] clip ready:",
-          extraClips.map((c) => `${c.name} (${c.duration.toFixed(2)}s)`).join(", ") || extraUrl,
-        );
-      } catch (err) {
-        console.error("Failed to load extra hero clip", extraUrl, err);
-      }
-    }
+    const total = extraJobs.length;
+    let ready = 0;
+    this.setLoadStatus(`Loading moves… 0/${total}`);
+
+    await Promise.all(
+      extraJobs.map(async ({ url: extraUrl, promise }) => {
+        try {
+          const extraGroup = await promise;
+          const extraClips = takeLabeledClips(extraGroup, clipLabelFromUrl(extraUrl));
+          this.player.addClips(extraClips);
+          this.enemies.addClips(extraClips);
+          ready += 1;
+          this.setLoadStatus(`Loading moves… ${ready}/${total}`);
+          console.info(
+            "[hero] clip ready:",
+            extraClips.map((c) => `${c.name} (${c.duration.toFixed(2)}s)`).join(", ") || extraUrl,
+          );
+        } catch (err) {
+          ready += 1;
+          this.setLoadStatus(`Loading moves… ${ready}/${total}`);
+          console.error("Failed to load extra hero clip", extraUrl, err);
+        }
+      }),
+    );
 
     try {
-      const punchGroup = await loadFbx(ENEMY_PUNCH_URL);
+      const punchGroup = await punchPromise;
       this.enemies.addClips(takeLabeledClips(punchGroup, clipLabelFromUrl(ENEMY_PUNCH_URL)));
     } catch (err) {
       console.error("Failed to load enemy punch clip", err);
     }
+
+    this.setLoadStatus("Ready");
+    window.setTimeout(() => this.setLoadStatus(null), 900);
   }
 
   private loadHeroGltf(url: string): void {
