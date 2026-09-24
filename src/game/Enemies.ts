@@ -254,17 +254,13 @@ export class EnemyManager {
       if (target) player.faceTowards(target.group.position.x, target.group.position.z);
     }
 
-    const fx = Math.sin(player.group.rotation.y);
-    const fz = Math.cos(player.group.rotation.y);
     for (const enemy of this.enemies) {
       if (enemy.isDead() || enemy.lastHitBy === attack.id) continue;
       const dx = enemy.group.position.x - p.x;
       const dz = enemy.group.position.z - p.z;
       const dist = Math.hypot(dx, dz);
       if (dist > attack.reach) continue;
-      const facing = dist > 1e-3 ? (dx * fx + dz * fz) / dist : 1;
-      const minFacing = attack.kind === "kick" ? 0.2 : -0.3;
-      if (facing < minFacing) continue;
+      // A spinning roundhouse and a ground shockwave both sweep the full circle.
       if (Math.abs(p.y - enemy.group.position.y) > 1.6) continue;
 
       const result = enemy.hurt(attack.damage, p.x, p.z);
@@ -335,6 +331,7 @@ class Enemy {
   private readonly body: THREE.Group;
   private readonly mixer: THREE.AnimationMixer;
   private readonly actions = new Map<EnemyClip, THREE.AnimationAction>();
+  private readonly ornaments: THREE.Mesh[] = [];
   private readonly materials: THREE.MeshStandardMaterial[] = [];
   private readonly velocity = new THREE.Vector3();
   private readonly moveDir = new THREE.Vector3();
@@ -404,6 +401,7 @@ class Enemy {
       const tinted = slots.map((slot) => this.tint(slot));
       obj.material = Array.isArray(obj.material) ? tinted : tinted[0];
     });
+    this.addRoleLook();
 
     this.mixer = new THREE.AnimationMixer(body);
     this.bindClips(clips);
@@ -650,6 +648,10 @@ class Enemy {
     this.mixer.stopAllAction();
     // Geometry and textures are shared with the hero; only the tinted materials are ours.
     for (const mat of this.materials) mat.dispose();
+    for (const mesh of this.ornaments) {
+      mesh.geometry.dispose();
+      (mesh.material as THREE.Material).dispose();
+    }
   }
 
   /** Strafe around the player at a personal radius, switching direction now and then. */
@@ -1009,11 +1011,15 @@ class Enemy {
     }
   }
 
-  /** Swap the navy outfit to crimson; skin tones (red-dominant) are left alone. */
+  /** Recolor the dark uniform so the three combat roles are visible at a glance. */
   private tint(slot: THREE.Material): THREE.Material {
     if (!(slot instanceof THREE.MeshStandardMaterial)) return slot;
     const mat = slot.clone();
     mat.emissive = new THREE.Color(0, 0, 0);
+    const color = new THREE.Color(
+      this.traits.archetype === "brawler" ? 0xc64131 :
+      this.traits.archetype === "acrobat" ? 0x9861c9 : 0xcaa34e,
+    );
     mat.onBeforeCompile = (shader) => {
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <map_fragment>",
@@ -1021,13 +1027,38 @@ class Enemy {
         {
           vec3 c = diffuseColor.rgb;
           if (c.b > c.r * 1.08 && c.b >= c.g) {
-            diffuseColor.rgb = vec3(c.b * 1.6 + 0.02, c.g * 0.45, c.r * 0.5);
+            float shade = max(c.b, 0.15) * 1.25;
+            diffuseColor.rgb = vec3(${color.r.toFixed(3)}, ${color.g.toFixed(3)}, ${color.b.toFixed(3)}) * shade;
           }
         }`,
       );
     };
-    mat.customProgramCacheKey = () => "red-clan";
+    mat.customProgramCacheKey = () => `red-clan-${this.traits.archetype}`;
     this.materials.push(mat);
     return mat;
+  }
+
+  private addRoleLook(): void {
+    const add = (geometry: THREE.BufferGeometry, color: number, x: number, y: number, z: number, rz = 0) => {
+      const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.22 }));
+      mesh.position.set(x, y, z);
+      mesh.rotation.z = rz;
+      mesh.castShadow = true;
+      this.body.add(mesh);
+      this.ornaments.push(mesh);
+    };
+    if (this.traits.archetype === "brawler") {
+      // Heavy shoulder plates make the aggressive fighter look wider.
+      add(new THREE.SphereGeometry(0.12, 8, 6), 0x712820, -0.25, 1.05, 0, 0.25);
+      add(new THREE.SphereGeometry(0.12, 8, 6), 0x712820, 0.25, 1.05, 0, -0.25);
+    } else if (this.traits.archetype === "acrobat") {
+      // Twin cloth tails leave a slim, high silhouette.
+      add(new THREE.ConeGeometry(0.045, 0.32, 5), 0x704394, -0.11, 0.92, -0.11, -0.28);
+      add(new THREE.ConeGeometry(0.045, 0.32, 5), 0x704394, 0.11, 0.92, -0.11, 0.28);
+    } else {
+      // A sheathed blade on the back marks the duelist.
+      add(new THREE.BoxGeometry(0.04, 0.55, 0.05), 0x50452c, 0.12, 0.8, -0.14, -0.55);
+      add(new THREE.BoxGeometry(0.14, 0.04, 0.06), 0xd4b75f, -0.01, 1.05, -0.14, -0.55);
+    }
   }
 }

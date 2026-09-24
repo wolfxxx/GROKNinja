@@ -63,13 +63,10 @@ export const PLAYER_REGEN = 5;
 export const PLAYER_REGEN_DELAY = 4;
 
 /** Player strikes: reach in metres from the player's feet, damage in enemy HP. */
-export const KICK_REACH = 1.9;
+export const KICK_REACH = 2.35;
 export const KICK_DAMAGE = 1;
-export const JUMP_HIT_REACH = 2.3;
+export const JUMP_HIT_REACH = 3.5;
 export const JUMP_HIT_DAMAGE = 2;
-/** The jump attack only deals damage while falling below this height (peak is ~1.45 m). */
-export const JUMP_HIT_SLAM_HEIGHT = 0.9;
-
 export const ENEMY_HEIGHT = 1.78;
 export const ENEMY_HP = 4;
 export const ENEMY_SPEED = 4.3;

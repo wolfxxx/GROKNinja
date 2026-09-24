@@ -1,10 +1,9 @@
 import * as THREE from "three";
-import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
-import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { ENEMY_PUNCH_URL, HERO_NINJA } from "./characterCatalog";
 import { GameAudio } from "./Audio";
+import { CombatEffects } from "./CombatEffects";
 import { EnemyManager } from "./Enemies";
 import { fitCharacter } from "./fitCharacter";
 import { Input } from "./Input";
@@ -12,7 +11,6 @@ import { Nature } from "./Nature";
 import { Player } from "./Player";
 import { ThirdPersonCamera } from "./ThirdPersonCamera";
 import { Village } from "./Village";
-import { assetUrl } from "./assetUrl";
 
 const MAX_DELTA = 0.05;
 
@@ -31,6 +29,7 @@ export class Game {
   private nature: Nature | null = null;
   private readonly enemies = new EnemyManager(this.scene);
   private readonly audio = new GameAudio();
+  private readonly combatEffects = new CombatEffects(this.scene);
   private defeatTimer = 0;
   private bannerTimeout = 0;
   private readonly hud = {
@@ -89,6 +88,10 @@ export class Game {
       }
     };
     this.player.onSound = this.audio.play;
+    this.player.onAttackEffect = (kind, at, facing) => {
+      if (kind === "kick") this.combatEffects.roundhouse(at, facing);
+      else this.combatEffects.slam(at);
+    };
     this.enemies.onSound = this.audio.play;
     this.enemies.onKill = (kills) => {
       if (this.hud.kills) this.hud.kills.textContent = `Red Clan defeated: ${kills}`;
@@ -131,6 +134,7 @@ export class Game {
     window.removeEventListener("resize", this.onResize);
     this.input.dispose();
     this.renderer.dispose();
+    this.combatEffects.dispose();
   }
 
   private setupRenderer(): void {
@@ -250,6 +254,7 @@ export class Game {
     const wheel = this.input.consumeWheel();
 
     this.player.update(delta, this.input, this.camera);
+    this.combatEffects.update(delta);
     this.enemies.update(delta, this.player);
     this.updateDefeat(delta);
     this.audio.updateMusic(delta, this.enemies.isInCombat() && !this.player.isDefeated());
@@ -310,24 +315,7 @@ export class Game {
   }
 
   private loadHeroNinja(): void {
-    const url = HERO_NINJA.url;
-    if (url.toLowerCase().endsWith(".fbx")) {
-      this.loadHeroFbx(url);
-      return;
-    }
-    this.loadHeroGltf(url);
-  }
-
-  private loadHeroFbx(url: string): void {
-    // Combat clips first so kick / roll / jump unlock as soon as possible on slow links.
-    const extraClipUrls = [
-      HERO_NINJA.kickUrl,
-      HERO_NINJA.rollUrl,
-      HERO_NINJA.jumpUrl,
-      HERO_NINJA.jumpHitUrl,
-      HERO_NINJA.idleUrl,
-    ].filter((extra) => extra && extra !== url);
-    void this.assembleHeroFbx(url, extraClipUrls);
+    void this.assembleHero();
   }
 
   private setLoadStatus(text: string | null): void {
@@ -341,25 +329,27 @@ export class Game {
     el.classList.remove("is-hidden");
   }
 
-  private async assembleHeroFbx(meshUrl: string, extraClipUrls: string[]): Promise<void> {
+  private async assembleHero(): Promise<void> {
     this.setLoadStatus("Downloading character…");
-
-    // Kick off every FBX at once — sequential waits were ~1 min on Pages.
-    const meshPromise = loadFbx(meshUrl);
-    const extraJobs = extraClipUrls.map((extraUrl) => ({
-      url: extraUrl,
-      promise: loadFbx(extraUrl),
-    }));
-    const punchPromise = loadFbx(ENEMY_PUNCH_URL);
+    const loader = new GLTFLoader();
+    // Start the small move downloads alongside the only mesh and texture file.
+    const extraJobs = [
+      HERO_NINJA.kickUrl,
+      HERO_NINJA.jumpHitUrl,
+      HERO_NINJA.idleUrl,
+      HERO_NINJA.rollUrl,
+      HERO_NINJA.jumpUrl,
+    ].map((url) => ({ url, promise: loader.loadAsync(url) }));
+    const meshPromise = loader.loadAsync(HERO_NINJA.url);
+    const punchPromise = loader.loadAsync(ENEMY_PUNCH_URL);
 
     try {
-      const meshGroup = await meshPromise;
-      const clips = takeLabeledClips(meshGroup, clipLabelFromUrl(meshUrl));
-      const fitted = fitCharacter(meshGroup, HERO_NINJA.height);
+      const meshGltf = await meshPromise;
+      const clips = labelClips(meshGltf.animations, "run");
+      const fitted = fitCharacter(meshGltf.scene, HERO_NINJA.height);
       fitted.name = "HeroNinja";
       this.enemies.setTemplate(fitted.userData.animRoot as THREE.Object3D);
-      const preferred = /run/i.test(meshUrl) ? "run" : "idle";
-      this.player.setModel(fitted, clips, preferred);
+      this.player.setModel(fitted, clips, "run");
       this.enemies.addClips(clips);
       this.followCam.syncImmediate();
       this.renderer.render(this.scene, this.camera);
@@ -368,7 +358,7 @@ export class Game {
         clips.map((c) => `${c.name} (${c.duration.toFixed(2)}s)`).join(", "),
       );
     } catch (err) {
-      console.error("Failed to load hero FBX", err);
+      console.error("Failed to load hero GLB", err);
       this.player.showPlaceholder();
       this.setLoadStatus("Character failed to load");
       return;
@@ -381,8 +371,8 @@ export class Game {
     await Promise.all(
       extraJobs.map(async ({ url: extraUrl, promise }) => {
         try {
-          const extraGroup = await promise;
-          const extraClips = takeLabeledClips(extraGroup, clipLabelFromUrl(extraUrl));
+          const extraGltf = await promise;
+          const extraClips = labelClips(extraGltf.animations, clipLabelFromUrl(extraUrl));
           this.player.addClips(extraClips);
           this.enemies.addClips(extraClips);
           ready += 1;
@@ -400,8 +390,8 @@ export class Game {
     );
 
     try {
-      const punchGroup = await punchPromise;
-      this.enemies.addClips(takeLabeledClips(punchGroup, clipLabelFromUrl(ENEMY_PUNCH_URL)));
+      const punchGltf = await punchPromise;
+      this.enemies.addClips(labelClips(punchGltf.animations, "punch"));
     } catch (err) {
       console.error("Failed to load enemy punch clip", err);
     }
@@ -410,33 +400,6 @@ export class Game {
     window.setTimeout(() => this.setLoadStatus(null), 900);
   }
 
-  private loadHeroGltf(url: string): void {
-    const loader = new GLTFLoader();
-    const draco = new DRACOLoader();
-    draco.setDecoderPath(assetUrl("draco/"));
-    loader.setDRACOLoader(draco);
-
-    loader.load(
-      url,
-      (gltf) => {
-        const fitted = fitCharacter(gltf.scene, HERO_NINJA.height);
-        fitted.name = "HeroNinja";
-        this.player.setModel(fitted, gltf.animations);
-      },
-      undefined,
-      (err) => {
-        console.error("Failed to load hero glTF", err);
-      },
-    );
-  }
-}
-
-function loadFbx(url: string): Promise<THREE.Group> {
-  return new Promise((resolve, reject) => {
-    new FBXLoader().load(url, resolve, undefined, (err) => {
-      reject(err instanceof Error ? err : new Error(String(err)));
-    });
-  });
 }
 
 function clipLabelFromUrl(
@@ -454,21 +417,15 @@ function clipLabelFromUrl(
   return "idle";
 }
 
-/** Mixamo names every take "mixamo.com" — use the filename as the clip name. */
-function takeLabeledClips(
-  group: THREE.Group,
+/** Blender names the take "Animation"; the source filename identifies it. */
+function labelClips(
+  clips: THREE.AnimationClip[],
   fallbackName: string,
 ): THREE.AnimationClip[] {
-  return (group.animations ?? [])
+  return clips
     .filter((clip) => clip.duration > 0.15 && clip.tracks.length > 0)
     .map((clip) => {
-      const lower = clip.name.toLowerCase();
-      if (!lower || lower === "mixamo.com" || lower.startsWith("take")) {
-        clip.name = fallbackName;
-      }
-      for (const track of clip.tracks) {
-        track.name = track.name.replace(/mixamorig:/g, "mixamorig");
-      }
+      clip.name = fallbackName;
       return clip;
     });
 }

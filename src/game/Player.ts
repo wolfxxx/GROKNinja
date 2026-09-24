@@ -3,7 +3,6 @@ import {
   GRAVITY,
   JUMP_HIT_DAMAGE,
   JUMP_HIT_REACH,
-  JUMP_HIT_SLAM_HEIGHT,
   JUMP_SPEED,
   KICK_DAMAGE,
   KICK_REACH,
@@ -74,9 +73,11 @@ export class Player {
   private attackSerial = 0;
   private slamTimer = 0;
   private kickWhooshed = false;
+  private kickEffectPlayed = false;
   private stepDistance = 0;
   private stepFoot = 0;
   onSound: SoundHook | null = null;
+  onAttackEffect: ((kind: "kick" | "slam", at: THREE.Vector3, facing: number) => void) | null = null;
   private hp = PLAYER_MAX_HP;
   private invulnTimer = 0;
   private stunTimer = 0;
@@ -90,6 +91,7 @@ export class Player {
   private rippleTimer = 0;
   private model: THREE.Object3D | null = null;
   private modelBaseY = 0;
+  private modelBaseRotationY = 0;
   private rollSpeed = 0;
   private readonly rollDir = new THREE.Vector3();
 
@@ -136,6 +138,7 @@ export class Player {
     this.group.add(model);
     this.model = model;
     this.modelBaseY = model.position.y;
+    this.modelBaseRotationY = model.rotation.y;
 
     model.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {
@@ -213,15 +216,11 @@ export class Player {
       const kick = this.actions.get("kick");
       if (!kick) return null;
       const t = kick.time / kick.getClip().duration;
-      if (t < 0.22 || t > 0.72) return null;
+      if (t < 0.3 || t > 0.7) return null;
       return { id: this.attackSerial, kind: "kick", reach: KICK_REACH, damage: KICK_DAMAGE };
     }
-    // Only the downward fist slam hurts: late in the fall, plus a moment after landing.
-    const slamming =
-      this.jumpAttacking &&
-      this.velocity.y < 0 &&
-      this.group.position.y - PLAYER_STAND_Y < JUMP_HIT_SLAM_HEIGHT;
-    if (slamming || this.slamTimer > 0) {
+    // Damage begins at impact, in sync with the visible ground shockwave.
+    if (this.slamTimer > 0) {
       return {
         id: this.attackSerial,
         kind: "jumphit",
@@ -418,6 +417,7 @@ export class Player {
     ) {
       this.kicking = true;
       this.kickWhooshed = false;
+      this.kickEffectPlayed = false;
       this.attackSerial++;
     }
 
@@ -480,6 +480,7 @@ export class Player {
         } else {
           this.onSound?.(this.jumpAttacking ? "slam_impact" : "land", this.group.position);
         }
+        if (this.jumpAttacking) this.onAttackEffect?.("slam", this.group.position, this.group.rotation.y);
       }
       this.grounded = true;
       if (this.jumpAttacking) this.slamTimer = 0.12;
@@ -797,8 +798,17 @@ export class Player {
         this.kickWhooshed = true;
         this.onSound?.("kick_whoosh", this.group.position);
       }
+      if (!this.kickEffectPlayed && kick.time >= dur * 0.27) {
+        this.kickEffectPlayed = true;
+        this.onAttackEffect?.("kick", this.group.position, this.group.rotation.y);
+      }
+      if (this.model) {
+        const t = THREE.MathUtils.smoothstep(kick.time / dur, 0.12, 0.82);
+        this.model.rotation.y = this.modelBaseRotationY + t * Math.PI * 2;
+      }
       if (!kick.isRunning() || kick.time >= dur * 0.9) this.kicking = false;
     }
+    if (!this.kicking && this.model) this.model.rotation.y = this.modelBaseRotationY;
     if (target === "idle" && !this.actions.has("idle")) this.applyStandingRest();
   }
 
@@ -864,15 +874,17 @@ function findClip(
   return undefined;
 }
 
-/** Keep Mixamo hip bob (Y) but stop the clip from walking the mesh off the player pivot. */
+/** The exported GLB rig is X-rotated: local Z is vertical, X/Y are ground axes. */
 export function flattenRootMotion(clips: THREE.AnimationClip[]): void {
   for (const clip of clips) {
     for (const track of clip.tracks) {
       if (!track.name.endsWith("Hips.position")) continue;
       const values = track.values;
+      const groundX = values[0];
+      const groundY = values[1];
       for (let i = 0; i < values.length; i += 3) {
-        values[i] = 0;
-        values[i + 2] = 0;
+        values[i] = groundX;
+        values[i + 1] = groundY;
       }
     }
   }

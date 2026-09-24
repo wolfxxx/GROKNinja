@@ -1,21 +1,21 @@
 import { assetUrl } from "./assetUrl";
 
 /**
- * Player hero — Mixamo ninja. Mesh comes from NINJArun.fbx; extra takes on
- * the same skeleton are loaded from idle / running-jump / roll / kick / jumphit FBXs.
+ * The run GLB holds the only mesh and textures. The other GLBs contain only
+ * animation tracks for the same named bones.
  */
 export const HERO_NINJA = {
-  url: assetUrl("characters/NINJArun.fbx"),
-  idleUrl: assetUrl("characters/NINJAidle.fbx"),
-  jumpUrl: assetUrl("characters/NINJArunjump.fbx"),
-  rollUrl: assetUrl("characters/NINJAroll.fbx"),
-  kickUrl: assetUrl("characters/NINJAkick.fbx"),
-  jumpHitUrl: assetUrl("characters/NINJAjumphit.fbx"),
+  url: assetUrl("characters/NINJArun.glb"),
+  idleUrl: assetUrl("characters/NINJAidle.glb"),
+  jumpUrl: assetUrl("characters/NINJArunjump.glb"),
+  rollUrl: assetUrl("characters/NINJAroll.glb"),
+  kickUrl: assetUrl("characters/NINJAkick.glb"),
+  jumpHitUrl: assetUrl("characters/NINJAjumphit.glb"),
   height: 1.7,
 } as const;
 
 /** Red Clan enemies reuse the hero rig; this take is only used by them. */
-export const ENEMY_PUNCH_URL = assetUrl("characters/NINJApunch.fbx");
+export const ENEMY_PUNCH_URL = assetUrl("characters/NINJApunch.glb");
 
 export type NpcSpawn = {
   name: string;

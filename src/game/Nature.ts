@@ -237,11 +237,13 @@ export class Nature implements WaterQuery {
     }
 
     const trunkGeo = new THREE.CylinderGeometry(0.22, 0.34, 3, 7).translate(0, 1.5, 0);
+    // Irregular overlapping boughs read more naturally beside the authored maples
+    // than the previous stack of four geometric cones.
     const crownParts = [
-      new THREE.ConeGeometry(2.1, 3.6, 8).translate(0, 3.8, 0),
-      new THREE.ConeGeometry(1.7, 3.2, 8).translate(0, 5.6, 0),
-      new THREE.ConeGeometry(1.2, 2.8, 8).translate(0, 7.3, 0),
-      new THREE.ConeGeometry(0.7, 2.2, 8).translate(0, 8.8, 0),
+      new THREE.IcosahedronGeometry(1, 1).scale(2.25, 1.45, 1.95).translate(-0.15, 4.0, 0.1),
+      new THREE.IcosahedronGeometry(1, 1).scale(1.9, 1.35, 1.8).translate(0.2, 5.4, -0.1),
+      new THREE.IcosahedronGeometry(1, 1).scale(1.55, 1.2, 1.45).translate(-0.12, 6.7, 0.08),
+      new THREE.IcosahedronGeometry(1, 1).scale(1.1, 1.12, 1.02).translate(0.12, 7.85, 0),
     ];
     const crownGeo = mergeGeometries(crownParts, false);
     crownParts.forEach((g) => g.dispose());
@@ -254,7 +256,7 @@ export class Nature implements WaterQuery {
     );
     const crown = new THREE.InstancedMesh(
       crownGeo,
-      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92 }),
       spots.length,
     );
     const m = new THREE.Matrix4();
@@ -265,7 +267,7 @@ export class Nature implements WaterQuery {
       m.compose(new THREE.Vector3(x, 0, z), q, new THREE.Vector3(s, s * (0.9 + this.rng() * 0.3), s));
       trunk.setMatrixAt(i, m);
       crown.setMatrixAt(i, m);
-      c.setHSL(0.3 + this.rng() * 0.06, 0.35 + this.rng() * 0.15, 0.15 + this.rng() * 0.07, THREE.SRGBColorSpace);
+      c.setHSL(0.3 + this.rng() * 0.06, 0.25 + this.rng() * 0.12, 0.07 + this.rng() * 0.045, THREE.SRGBColorSpace);
       crown.setColorAt(i, c);
       this.addCollider(x, z, 0.4 * s);
     });
@@ -406,21 +408,26 @@ export class Nature implements WaterQuery {
   // ---------------------------------------------------------------- grass
 
   private buildGrass(): void {
-    // One clump = three crossed tapered blades.
+    // Curved, uneven leaves break up the straight triangular lawn silhouette.
     const blade = (angle: number): THREE.BufferGeometry => {
-      const w = 0.07;
-      const h = 0.55;
+      const w = 0.09;
+      const h = 0.68;
       const g = new THREE.BufferGeometry();
-      const verts = [-w, 0, 0, w, 0, 0, -w * 0.6, h * 0.5, 0, w * 0.6, h * 0.5, 0, 0, h, 0];
-      const uvs = [0, 0, 1, 0, 0, 0.5, 1, 0.5, 0.5, 1];
+      const verts = [
+        -w, 0, 0, w, 0, 0,
+        -w * 0.65, h * 0.46, 0.08, w * 0.65, h * 0.46, 0.08,
+        -w * 0.2, h * 0.8, 0.18, w * 0.2, h * 0.8, 0.18,
+        0, h, 0.26,
+      ];
+      const uvs = [0, 0, 1, 0, 0, 0.46, 1, 0.46, 0, 0.8, 1, 0.8, 0.5, 1];
       g.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
       g.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-      g.setIndex([0, 1, 2, 1, 3, 2, 2, 3, 4]);
+      g.setIndex([0, 1, 2, 1, 3, 2, 2, 3, 4, 3, 5, 4, 4, 5, 6]);
       g.rotateY(angle);
       g.translate(Math.cos(angle) * 0.06, 0, Math.sin(angle) * 0.06);
       return g;
     };
-    const parts = [blade(0), blade(Math.PI / 3), blade((2 * Math.PI) / 3)];
+    const parts = [blade(0), blade(Math.PI / 3), blade((2 * Math.PI) / 3), blade(Math.PI * 0.85)];
     const geo = mergeGeometries(parts, false);
     parts.forEach((p) => p.dispose());
     if (!geo) return;
@@ -432,7 +439,7 @@ export class Nature implements WaterQuery {
     const colors: number[] = [];
     for (let i = 0; i < uv.count; i++) {
       const t = uv.getY(i);
-      colors.push(0.08 + t * 0.22, 0.16 + t * 0.3, 0.03 + t * 0.06);
+      colors.push(0.09 + t * 0.24, 0.16 + t * 0.31, 0.04 + t * 0.11);
     }
     geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
 
@@ -443,7 +450,7 @@ export class Nature implements WaterQuery {
     });
     this.addWind(mat, 0.55, 0.22);
 
-    const count = 26000;
+    const count = 18000;
     const mesh = new THREE.InstancedMesh(geo, mat, count);
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();

@@ -8,7 +8,7 @@ generated with ElevenLabs.
 
 ## Run
 
-Large assets (FBX, GLB, PNG) are stored with [Git LFS](https://git-lfs.com/),
+Large source assets (FBX, GLB, PNG) are stored with [Git LFS](https://git-lfs.com/),
 so install it before cloning.
 
 ```bash
@@ -27,6 +27,11 @@ Live site (GitHub Pages): **https://wolfxxx.github.io/GROKNinja/**
 
 First load can take a while — the Mixamo takes and village assets are large.
 The site is rebuilt and published automatically on every push to `main`.
+
+The playable ninja is shipped as one GLB with mesh and textures plus small
+animation-only GLBs. To rebuild them after changing a source Mixamo take, run
+`blender --background --python tools/convert-ninja.py`. Source takes are in
+`source/characters/`; keep them outside `public/` so Vite does not publish them.
 
 ## Controls
 

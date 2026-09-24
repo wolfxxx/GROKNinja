@@ -32,9 +32,6 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Link village assets into public/
-        run: ln -sfn ../ancientvillage public/ancientvillage
-
       - name: Build
         env:
           GITHUB_PAGES: "1"

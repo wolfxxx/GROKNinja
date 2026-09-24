@@ -32,6 +32,8 @@ Thumbs.db
 # Linked at build/dev time to ../ancientvillage (see deploy workflow)
 /public/ancientvillage
 /public/characters/NINJAmix.fbx
+/source/characters/NINJAmix.fbx
+/work/
 *.blend
 *.blend1
 

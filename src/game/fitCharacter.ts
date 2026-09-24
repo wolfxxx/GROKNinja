@@ -79,13 +79,7 @@ function polishStandard(slot: THREE.MeshStandardMaterial): void {
 
 /** Ignore FBX cameras / lights so Mixamo extras don't flatten the scale. */
 function meshBounds(root: THREE.Object3D): THREE.Box3 {
-  const box = new THREE.Box3();
-  root.traverse((obj) => {
-    if (!(obj instanceof THREE.Mesh) || !obj.geometry) return;
-    if (!obj.geometry.boundingBox) obj.geometry.computeBoundingBox();
-    const geoBox = obj.geometry.boundingBox;
-    if (!geoBox) return;
-    box.union(geoBox.clone().applyMatrix4(obj.matrixWorld));
-  });
-  return box;
+  // Skinned meshes can have a large bind-pose offset from their geometry.
+  // Box3 asks the skin for its posed bounds rather than scaling raw vertices.
+  return new THREE.Box3().setFromObject(root);
 }
