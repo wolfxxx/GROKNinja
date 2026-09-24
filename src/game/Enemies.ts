@@ -1039,6 +1039,10 @@ class Enemy {
   }
 
   private addRoleLook(): void {
+    // The brawler's crimson uniform already identifies it. Static shoulder
+    // meshes do not follow the animated bones and appear to float during moves.
+    if (this.traits.archetype === "brawler") return;
+
     const add = (geometry: THREE.BufferGeometry, color: number, x: number, y: number, z: number, rz = 0) => {
       const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.22 }));
       mesh.position.set(x, y, z);
@@ -1047,11 +1051,7 @@ class Enemy {
       this.body.add(mesh);
       this.ornaments.push(mesh);
     };
-    if (this.traits.archetype === "brawler") {
-      // Heavy shoulder plates make the aggressive fighter look wider.
-      add(new THREE.SphereGeometry(0.12, 8, 6), 0x712820, -0.25, 1.05, 0, 0.25);
-      add(new THREE.SphereGeometry(0.12, 8, 6), 0x712820, 0.25, 1.05, 0, -0.25);
-    } else if (this.traits.archetype === "acrobat") {
+    if (this.traits.archetype === "acrobat") {
       // Twin cloth tails leave a slim, high silhouette.
       add(new THREE.ConeGeometry(0.045, 0.32, 5), 0x704394, -0.11, 0.92, -0.11, -0.28);
       add(new THREE.ConeGeometry(0.045, 0.32, 5), 0x704394, 0.11, 0.92, -0.11, 0.28);
